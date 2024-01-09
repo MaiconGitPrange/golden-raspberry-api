@@ -1,0 +1,16 @@
+{
+    "scripts": {
+        "start": "node app.js",
+        "test": "mocha test/test.js"
+    },
+    "dependencies": {
+        "csv-parser": "^3.0.0",
+        "express": "^4.17.1",
+        "sqlite3": "^5.1.7"
+    },
+    "devDependencies": {
+        "jest": "^27.0.6",
+        "mocha": "^10.2.0",
+        "supertest": "^6.3.3"
+    }
+}
