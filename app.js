@@ -16,24 +16,22 @@ const errorHandler = (err, req, res, next) => {
 app.use(errorHandler);
 
 // Leitura do arquivo CSV e inserção de dados no banco de dados
-// Leitura do arquivo CSV e inserção de dados no banco de dados
 fs.createReadStream('./movielist.csv', { encoding: 'latin1' }) // Adicionado encoding
     .pipe(csv({ separator: ';' }))
     .on('data', async(row) => {
         const db = await dbPromise;
 
-        // Converta todos os campos para strings
         const stringifiedRow = Object.fromEntries(
             Object.entries(row).map(([key, value]) => [key, String(value)])
         );
 
         const result = await new Promise((resolve, reject) => {
             db.run('INSERT INTO films (year, title, studios, producer_name, winner) VALUES (?, ?, ?, ?, ?)', [
-                parseInt(stringifiedRow.year, 10), // Converte para número inteiro
-                stringifiedRow.title.toString().trim(), // Remove espaços em branco no início e no final
+                parseInt(stringifiedRow.year, 10),
+                stringifiedRow.title.toString().trim(),
                 stringifiedRow.studios.toString().trim(),
                 stringifiedRow.producers.toString().trim(),
-                stringifiedRow.winner === 'yes' ? 1 : 0, // Converte 'yes' para 1, 'no' para 0
+                stringifiedRow.winner === 'yes' ? 1 : 0,
             ], function(err) {
                 if (err) {
                     console.error('Erro ao inserir dados:', err);
