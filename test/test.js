@@ -1,49 +1,91 @@
 const assert = require('assert');
 const request = require('supertest');
-const { app, dbPromise } = require('../app');
+const fs = require('fs');
+const { app } = require('../app');
 
-// Função auxiliar para verificar a estrutura esperada
-const verifyStructure = (data) => {
-    assert.strictEqual(data.length, 1);
-    const item = data[0];
+describe('Testes da Rota /producers/intervals', () => {
+    let originalData;
 
-    assert.strictEqual(typeof item.producer, 'string');
-    assert.strictEqual(typeof item.interval, 'number');
-    assert.strictEqual(typeof item.previousWin, 'number');
-    assert.strictEqual(typeof item.followingWin, 'number');
-};
-
-before(async() => {
-    try {
-        // Inicializa o banco de dados antes de iniciar os testes
-        await dbPromise;
-        console.log('Banco de dados inicializado.');
-    } catch (err) {
-        console.error('Erro ao inicializar o banco de dados:', err);
-        throw err;
-    }
-});
-
-describe('Testes da API', () => {
-    it('Deve retornar o produtor com maior intervalo entre dois prêmios consecutivos', async() => {
-        const res = await request(app)
-            .get('/producers/max-interval')
-            .expect('Content-Type', /json/)
-            .expect(200);
-
-        verifyStructure(res.body.max);
+    before((done) => {
+        // Realizar a leitura do arquivo original antes de iniciar os testes
+        originalData = [];
+        fs.createReadStream('./movielist.csv', { encoding: 'latin1' })
+            .pipe(require('csv-parser')({ separator: ';' }))
+            .on('data', (row) => {
+                originalData.push(row);
+            })
+            .on('end', () => {
+                done();
+            });
     });
 
-    it('Deve retornar o produtor que obteve dois prêmios mais rápido', async() => {
+    it('Deve retornar os produtores com maior e menor intervalo entre dois prêmios consecutivos', async() => {
+        // Realizar a requisição à rota /producers/intervals
         const res = await request(app)
-            .get('/producers/min-interval')
+            .get('/producers/intervals')
             .expect('Content-Type', /json/)
             .expect(200);
 
-        if (res.body.min && res.body.min.length > 0) {
-            verifyStructure(res.body.min);
-        } else {
-            throw new Error('O retorno não possui a estrutura esperada.');
+        // Comparar os resultados obtidos com os resultados esperados do arquivo original
+        assert.deepStrictEqual(res.body.min, expectedResultMin(originalData));
+        assert.deepStrictEqual(res.body.max, expectedResultMax(originalData));
+    });
+});
+
+// Função auxiliar para calcular o resultado esperado para o intervalo mínimo
+const expectedResultMin = (data) => {
+    const producersMap = new Map();
+
+    data.forEach((row) => {
+        if (row.winner === 'yes') {
+            const producer = row.producers.trim();
+            const year = parseInt(row.year, 10);
+
+            if (producersMap.has(producer)) {
+                const existingData = producersMap.get(producer);
+                existingData.followingWin = year;
+                existingData.interval = year - existingData.previousWin;
+            } else {
+                producersMap.set(producer, {
+                    producer,
+                    previousWin: year,
+                    followingWin: year,
+                    interval: 0,
+                });
+            }
         }
     });
-});
+
+    const sortedResults = [...producersMap.values()].sort((a, b) => a.interval - b.interval);
+
+    return sortedResults.slice(0, 1); // Retorna o produtor com o menor intervalo
+};
+
+// Função auxiliar para calcular o resultado esperado para o intervalo máximo
+const expectedResultMax = (data) => {
+    const producersMap = new Map();
+
+    data.forEach((row) => {
+        if (row.winner === 'yes') {
+            const producer = row.producers.trim();
+            const year = parseInt(row.year, 10);
+
+            if (producersMap.has(producer)) {
+                const existingData = producersMap.get(producer);
+                existingData.followingWin = year;
+                existingData.interval = year - existingData.previousWin;
+            } else {
+                producersMap.set(producer, {
+                    producer,
+                    previousWin: year,
+                    followingWin: year,
+                    interval: 0,
+                });
+            }
+        }
+    });
+
+    const sortedResults = [...producersMap.values()].sort((a, b) => b.interval - a.interval);
+
+    return sortedResults.slice(0, 1); // Retorna o produtor com o maior intervalo
+};

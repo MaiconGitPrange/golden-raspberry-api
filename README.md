@@ -8,5 +8,8 @@
 1. Inicialize a aplicação: `npm start`
 2. Acesse a API em http://localhost:3000
 
+## Testar a rota
+1. http://localhost:3000/producers/intervals
+
 ## Testes de Integração
 1. Execute os testes apenas com o servidor rodando: `npm test`
